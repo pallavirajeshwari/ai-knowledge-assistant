@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ article.title }} - AI Knowledge Assistant{% endblock %}
+
+{% block extra_css %}
+<style>
+    .article-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem;
+    }
+
+    .article-header {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .category-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .article-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #111827;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+
+    .article-meta {
+        display: flex;
+        gap: 2rem;
+        color: #6b7280;
+        font-size: 0.875rem;
+        flex-wrap: wrap;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .article-content {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 1rem;
+        line-height: 1.8;
+        color: #374151;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .article-content p {
+        margin-bottom: 1.5rem;
+        font-size: 1.0625rem;
+    }
+
+    .article-content h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 2.5rem 0 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .article-content h3 {
+        font-size: 1.375rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 2rem 0 1rem;
+    }
+
+    .article-content ul,
+    .article-content ol {
+        margin: 1.5rem 0;
+        padding-left: 2rem;
+    }
+
+    .article-content li {
+        margin: 0.75rem 0;
+    }
+
+    .article-content code {
+        background: #f3f4f6;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+        color: #ef4444;
+    }
+
+    .article-content blockquote {
+        border-left: 4px solid #667eea;
+        padding-left: 1.5rem;
+        margin: 1.5rem 0;
+        color: #6b7280;
+        font-style: italic;
+    }
+
+    .article-footer {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .back-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .share-section {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .share-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid #e5e7eb;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .share-btn:hover {
+        border-color: #667eea;
+        background: #f3f4f6;
+    }
+
+    @media (max-width: 768px) {
+        .article-title {
+            font-size: 2rem;
+        }
+
+        .article-content {
+            padding: 1.5rem;
+        }
+
+        .article-meta {
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="article-container">
+    <div class="article-header">
+        <span class="category-badge">
+            {{ article.category.icon }} {{ article.category.name }}
+        </span>
+        <h1 class="article-title">{{ article.title }}</h1>
+        <div class="article-meta">
+            <div class="meta-item">
+                <span>👤</span>
+                <span>{{ article.author.get_full_name|default:article.author.username }}</span>
+            </div>
+            <div class="meta-item">
+                <span>⏱️</span>
+                <span>{{ article.read_time }} min read</span>
+            </div>
+            <div class="meta-item">
+                <span>👁️</span>
+                <span>{{ article.views }} views</span>
+            </div>
+            <div class="meta-item">
+                <span>📅</span>
+                <span>{{ article.created_at|date:"M d, Y" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="article-content">
+        {{ article.content|linebreaks|safe }}
+    </div>
+
+    <div class="article-footer">
+        <a href="{% url 'knowledge_base' %}" class="back-btn">
+            <span>←</span>
+            <span>Back to Knowledge Base</span>
+        </a>
+
+        <div class="share-section">
+            <button class="share-btn" title="Share on Twitter" onclick="shareOnTwitter()">
+                🐦
+            </button>
+            <button class="share-btn" title="Share on LinkedIn" onclick="shareOnLinkedIn()">
+                💼
+            </button>
+            <button class="share-btn" title="Copy Link" onclick="copyLink()">
+                🔗
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function shareOnTwitter() {
+        const url = window.location.href;
+        const text = "{{ article.title|escapejs }}";
+        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    function shareOnLinkedIn() {
+        const url = window.location.href;
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+    }
+
+    function copyLink() {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Link copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
+    }
+</script>
+{% endblock %}

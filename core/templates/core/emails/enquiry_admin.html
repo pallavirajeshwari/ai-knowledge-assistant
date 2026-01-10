@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Enquiry Received</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .info-grid {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-row {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 15px;
+        }
+
+        .message-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .message-box p {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #10b981;
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>🔔 New Enquiry Received</h1>
+        </div>
+
+        <div class="content">
+            <div class="alert-box">
+                <strong>⚡ Action Required:</strong> A new enquiry has been submitted and requires your attention.
+            </div>
+
+            <div class="info-grid">
+                <div class="info-row">
+                    <div class="info-label">📋 Status</div>
+                    <div class="info-value">
+                        <span class="badge">{{ enquiry.get_status_display }}</span>
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">👤 Name</div>
+                    <div class="info-value">{{ enquiry.name }}</div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">📧 Email</div>
+                    <div class="info-value">
+                        <a href="mailto:{{ enquiry.email }}" style="color: #667eea; text-decoration: none;">
+                            {{ enquiry.email }}
+                        </a>
+                    </div>
+                </div>
+
+                {% if enquiry.phone %}
+                <div class="info-row">
+                    <div class="info-label">📞 Phone</div>
+                    <div class="info-value">
+                        <a href="tel:{{ enquiry.phone }}" style="color: #667eea; text-decoration: none;">
+                            {{ enquiry.phone }}
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if enquiry.user %}
+                <div class="info-row">
+                    <div class="info-label">👥 Registered User</div>
+                    <div class="info-value">{{ enquiry.user.username }} ({{ enquiry.user.email }})</div>
+                </div>
+                {% endif %}
+
+                <div class="info-row">
+                    <div class="info-label">📝 Subject</div>
+                    <div class="info-value"><strong>{{ enquiry.subject }}</strong></div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">⏰ Submitted</div>
+                    <div class="info-value">{{ enquiry.created_at|date:"F d, Y at h:i A" }}</div>
+                </div>
+            </div>
+
+            <div class="info-label" style="margin-bottom: 10px;">💬 Message</div>
+            <div class="message-box">
+                <p>{{ enquiry.message }}</p>
+            </div>
+
+            {% if admin_url %}
+            <div style="text-align: center;">
+                <a href="{{ admin_url }}" class="button">
+                    View in Admin Panel →
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="footer">
+            <p>
+                This is an automated notification from AI Knowledge Assistant.<br>
+                Please respond to this enquiry at your earliest convenience.
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

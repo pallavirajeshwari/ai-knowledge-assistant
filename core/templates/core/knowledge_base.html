@@ -1,0 +1,697 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Knowledge Base - AI Knowledge Assistant{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Base</title>
+    <style>
+        /* Light Mode (default) */
+        :root {
+            --bg-overlay: rgba(255, 255, 255, 0.85);
+            --nav-bg: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --border-color: #e5e7eb;
+            --card-bg: #ffffff;
+            --hero-bg: rgba(45, 55, 72, 0.9);
+            --hero-subtitle: #cbd5e0;
+            --filter-bg: #ffffff;
+            --filter-border: #e5e7eb;
+            --filter-text: #6b7280;
+            --category-bg: #f3f4f6;
+            --category-text: #6b7280;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.15);
+            --empty-text: #6b7280;
+            --dropdown-bg: #ffffff;
+        }
+
+        /* Dark Mode */
+        html.dark-mode {
+            --bg-overlay: rgba(15, 23, 42, 0.9);
+            --nav-bg: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --border-color: #334155;
+            --card-bg: #1e293b;
+            --hero-bg: rgba(15, 23, 42, 0.95);
+            --hero-subtitle: #94a3b8;
+            --filter-bg: #1e293b;
+            --filter-border: #334155;
+            --filter-text: #94a3b8;
+            --category-bg: #334155;
+            --category-text: #94a3b8;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.5);
+            --empty-text: #94a3b8;
+            --dropdown-bg: #1e293b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-image: url("{% static 'images/ai.webp' %}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+            color: var(--text-primary);
+        }
+
+        /* Overlay for readability */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-overlay);
+            z-index: -1;
+        }
+
+        nav {
+            background: var(--nav-bg);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            padding: 1rem 1.5rem;
+        }
+
+        .nav-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-item {
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            border-radius: 0.5rem;
+            transition: background 0.2s;
+        }
+
+        .nav-item:hover {
+            background: var(--filter-bg);
+        }
+
+        .nav-item.active {
+            background: var(--category-bg);
+            color: #667eea;
+        }
+
+        html.dark-mode .nav-item.active {
+            color: #a78bfa;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+        }
+
+        /* User Profile Dropdown */
+        .user-profile {
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Dropdown Menu */
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            background: var(--dropdown-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            min-width: 220px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        html.dark-mode .dropdown-menu {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dropdown-user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .dropdown-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dropdown-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .dropdown-user-details {
+            flex: 1;
+        }
+
+        .dropdown-username {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .dropdown-email {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .dropdown-items {
+            padding: 0.5rem 0;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .dropdown-item:hover {
+            background: var(--filter-bg);
+            color: var(--text-primary);
+        }
+
+        .dropdown-item svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 0.5rem 0;
+        }
+
+        .dropdown-item.logout {
+            color: #ef4444;
+        }
+
+        .dropdown-item.logout:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .hero-section {
+            background: var(--hero-bg);
+            color: white;
+            padding: 4rem 1.5rem;
+            border-radius: 1rem;
+            margin: 2rem auto;
+            max-width: 1200px;
+            box-shadow: var(--shadow-hover);
+        }
+
+        .hero-content {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--hero-subtitle);
+            margin-bottom: 2rem;
+        }
+
+        .search-bar {
+            background: white;
+            border-radius: 1rem;
+            padding: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            max-width: 600px;
+        }
+
+        html.dark-mode .search-bar {
+            background: #1e293b;
+            border: 1px solid #334155;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: scale(1.05);
+        }
+
+        main {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 0.75rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-pill {
+            padding: 0.75rem 1.5rem;
+            border: 1px solid var(--filter-border);
+            background: var(--filter-bg);
+            border-radius: 9999px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            text-decoration: none;
+            color: var(--filter-text);
+            transition: all 0.2s;
+        }
+
+        .filter-pill:hover {
+            transform: translateY(-2px);
+        }
+
+        .filter-pill.active {
+            background: #a78bfa;
+            color: white;
+            border-color: #a78bfa;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .article-card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            border: 1px solid var(--border-color);
+        }
+
+        .article-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-4px);
+        }
+
+        .article-body {
+            padding: 1.5rem;
+        }
+
+        .article-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .article-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .icon-orange { background: linear-gradient(135deg, #ff6b4a, #ff1493); }
+        .icon-teal { background: linear-gradient(135deg, #20C997, #00D9FF); }
+        .icon-green { background: linear-gradient(135deg, #10b981, #34d399); }
+        .icon-purple { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .icon-pink { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+        .icon-yellow { background: linear-gradient(135deg, #f59e0b, #f97316); }
+
+        .article-category {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--category-bg);
+            color: var(--category-text);
+        }
+
+        .article-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .article-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .article-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .article-time {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        .read-more-btn {
+            color: #a78bfa;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .read-more-btn:hover {
+            color: #8b5cf6;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: var(--empty-text);
+        }
+
+        .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <img src="{% static 'images/ai.webp' %}" alt="AI Logo">
+                </div>                
+                AI Assistant
+            </div>
+            <div class="nav-menu">
+                <a href="{% url 'dashboard' %}" class="nav-item">Dashboard</a>
+                <a href="{% url 'chat' %}" class="nav-item">Chat</a>
+                <a href="{% url 'knowledge_base' %}" class="nav-item active">Knowledge Base</a>
+            </div>
+            <div class="nav-right">
+                <!-- User Profile Dropdown -->
+                <div class="user-profile">
+                    <div class="user-avatar" id="userAvatar">
+                        {% if user.profile.avatar %}
+                            <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}">
+                        {% else %}
+                            {{ user.profile.get_initials }}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Dropdown Menu -->
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <div class="dropdown-header">
+                            <div class="dropdown-user-info">
+                                <div class="dropdown-avatar">
+                                    {% if user.profile.avatar %}
+                                        <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}">
+                                    {% else %}
+                                        {{ user.profile.get_initials }}
+                                    {% endif %}
+                                </div>
+                                <div class="dropdown-user-details">
+                                    <div class="dropdown-username">{{ user.username }}</div>
+                                    <div class="dropdown-email">{{ user.email }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="dropdown-items">
+                            <a href="{% url 'dashboard' %}" class="dropdown-item">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                </svg>
+                                Dashboard
+                            </a>
+                            
+                            <a href="{% url 'settings' %}" class="dropdown-item">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                Settings
+                            </a>
+                            
+                            <a href="{% url 'contact' %}" class="dropdown-item">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                Contact
+                            </a>
+                            
+                            <div class="dropdown-divider"></div>
+                            
+                            <a href="{% url 'logout' %}" class="dropdown-item logout">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                </svg>
+                                Logout
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Knowledge Base</h1>
+            <p class="hero-subtitle">Explore our comprehensive collection of articles and resources</p>
+            <form method="get" action="{% url 'knowledge_base' %}">
+                <div class="search-bar">
+                    <input type="text" name="q" class="search-input" 
+                           placeholder="Search articles, topics, or keywords..." 
+                           value="{{ search_query|default:'' }}">
+                    <button type="submit" class="search-btn">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <main>
+        <div class="filter-pills">
+            <a href="{% url 'knowledge_base' %}" class="filter-pill {% if not request.GET.category %}active{% endif %}">
+                All Topics
+            </a>
+            {% for category in categories %}
+            <a href="?category={{ category.slug }}" 
+               class="filter-pill {% if request.GET.category == category.slug %}active{% endif %}">
+                {{ category.name }}
+            </a>
+            {% endfor %}
+        </div>
+
+        <div class="articles-grid">
+            {% for article in articles %}
+            <div class="article-card">
+                <div class="article-body">
+                    <div class="article-header">
+                        <div class="article-icon {{ article.category.color }}">
+                            {{ article.category.icon }}
+                        </div>
+                        <span class="article-category">{{ article.category.name }}</span>
+                    </div>
+                    <h3 class="article-title">{{ article.title }}</h3>
+                    <p class="article-description">{{ article.description|truncatewords:20 }}</p>
+                    <div class="article-footer">
+                        <span class="article-time">{{ article.read_time }} min read</span>
+                        <a href="{% url 'article_detail' article.slug %}" class="read-more-btn">
+                            Read More →
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <h3>No articles found</h3>
+                <p>Try a different search term or browse all topics.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <script>
+        // Apply saved theme on page load
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark-mode');
+        }
+
+        // User Profile Dropdown Toggle
+        const userAvatar = document.getElementById('userAvatar');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+
+        userAvatar.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!userAvatar.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+
+        // Close dropdown when pressing Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>
+{% endblock %}

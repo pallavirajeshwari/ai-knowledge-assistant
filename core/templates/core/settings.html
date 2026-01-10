@@ -1,0 +1,958 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Settings - AI Knowledge Assistant{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background: var(--bg-primary);
+        min-height: 100vh;
+        transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* Light Mode */
+    :root {
+        --bg-primary: #f9fafb;
+        --bg-secondary: #ffffff;
+        --bg-card: #ffffff;
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+        --accent: #667eea;
+        --accent-hover: #5568d3;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Dark Mode */
+    html.dark-mode {
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --bg-card: #1e293b;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --border-color: #334155;
+        --accent: #818cf8;
+        --accent-hover: #6366f1;
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+        color: var(--text-secondary);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+        margin-bottom: 1rem;
+    }
+
+    .back-link:hover {
+        color: var(--accent-hover);
+        text-decoration: underline;
+    }
+
+    /* Settings Layout */
+    .settings-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+    }
+
+    /* Sidebar Menu */
+    .settings-sidebar {
+        background: var(--bg-card);
+        border-radius: 1rem;
+        padding: 1rem;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+        height: fit-content;
+        position: sticky;
+        top: 2rem;
+    }
+
+    .settings-menu {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .menu-item:hover {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+
+    .menu-item.active {
+        background: var(--accent);
+        color: white;
+    }
+
+    .menu-item-icon {
+        font-size: 1.25rem;
+    }
+
+    /* Content Area */
+    .settings-content {
+        background: var(--bg-card);
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+        min-height: 500px;
+    }
+
+    .content-section {
+        display: none;
+    }
+
+    .content-section.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Avatar Upload Section */
+    .avatar-section {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background: var(--bg-secondary);
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .avatar-preview {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 2rem;
+        position: relative;
+        overflow: hidden;
+        border: 3px solid rgba(102, 126, 234, 0.3);
+        flex-shrink: 0;
+    }
+
+    .avatar-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .avatar-info {
+        flex: 1;
+    }
+
+    .avatar-info h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .avatar-info p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+
+    .avatar-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .upload-btn {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: background 0.2s;
+    }
+
+    .upload-btn:hover {
+        background: var(--accent-hover);
+    }
+
+    .remove-btn {
+        background: #ef4444;
+    }
+
+    .remove-btn:hover {
+        background: #dc2626;
+    }
+
+    #avatarInput {
+        display: none;
+    }
+
+    /* Form Elements */
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+        font-size: 0.9rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: border 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .form-textarea {
+        min-height: 100px;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    .password-input-wrapper {
+        position: relative;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: var(--text-secondary);
+        font-size: 1.2rem;
+        user-select: none;
+    }
+
+    .password-toggle:hover {
+        color: var(--text-primary);
+    }
+
+    /* Toggle Switch */
+    .setting-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        margin-bottom: 1rem;
+        border-radius: 0.75rem;
+    }
+
+    .setting-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .setting-info h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .setting-info p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .toggle-switch {
+        position: relative;
+        width: 56px;
+        height: 28px;
+        cursor: pointer;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--border-color);
+        border-radius: 28px;
+        transition: 0.3s;
+    }
+
+    .toggle-slider:before {
+        content: "";
+        position: absolute;
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.3s;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+        background: var(--accent);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(28px);
+    }
+
+    /* Notification Item */
+    .notification-item {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 0.5rem;
+    }
+
+    .notification-title {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .notification-time {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    .notification-text {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    /* Stats Card */
+    .stats-card {
+        background: var(--bg-secondary);
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+        font-size: 0.95rem;
+    }
+
+    .btn:hover {
+        background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+        background: var(--border-color);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .settings-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .settings-sidebar {
+            position: static;
+        }
+
+        .avatar-section {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <a href="{% url 'dashboard' %}" class="back-link">← Back to Dashboard</a>
+        <h1>⚙️ Settings</h1>
+        <p class="subtitle">Manage your account preferences and settings</p>
+    </div>
+
+    <div class="settings-layout">
+        <!-- Sidebar Menu -->
+        <div class="settings-sidebar">
+            <ul class="settings-menu">
+                <li class="menu-item active" data-section="profile">
+                    <span class="menu-item-icon">👤</span>
+                    <span>Profile</span>
+                </li>
+                <li class="menu-item" data-section="appearance">
+                    <span class="menu-item-icon">🎨</span>
+                    <span>Appearance</span>
+                </li>
+                <li class="menu-item" data-section="notifications">
+                    <span class="menu-item-icon">🔔</span>
+                    <span>Notifications</span>
+                </li>
+                <li class="menu-item" data-section="recent">
+                    <span class="menu-item-icon">📬</span>
+                    <span>Recent Activity</span>
+                </li>
+                <li class="menu-item" data-section="account">
+                    <span class="menu-item-icon">📊</span>
+                    <span>Account Info</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Content Area -->
+        <div class="settings-content">
+            <!-- Profile Section -->
+            <div class="content-section active" id="profile-section">
+                <h2 class="section-title">
+                    <span>👤</span>
+                    <span>Profile Settings</span>
+                </h2>
+
+                <form method="POST" enctype="multipart/form-data" id="profileForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="profile">
+
+                    <!-- Avatar Upload -->
+                    <div class="avatar-section">
+                        <div class="avatar-preview" id="avatarPreview">
+                            {% if profile.avatar %}
+                                <img src="{{ profile.avatar.url }}" alt="{{ user.username }}" id="avatarImage">
+                            {% else %}
+                                <span id="avatarInitials">{{ profile.get_initials }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="avatar-info">
+                            <h3>Profile Picture</h3>
+                            <p>Upload a new avatar. JPG, PNG or GIF (Max 5MB)</p>
+                            <div class="avatar-buttons">
+                                <label for="avatarInput" class="upload-btn">
+                                    📷 Upload Avatar
+                                </label>
+                                <input type="file" id="avatarInput" name="avatar" accept="image/*">
+                                {% if profile.avatar %}
+                                <button type="button" class="upload-btn remove-btn" onclick="removeAvatar()">
+                                    🗑️ Remove
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Form Fields -->
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="first_name" class="form-input" value="{{ user.first_name }}" placeholder="Enter your full name">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-input" value="{{ user.username }}" disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" name="email" class="form-input" value="{{ user.email }}" placeholder="your.email@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Bio</label>
+                        <textarea name="bio" class="form-input form-textarea" placeholder="Tell us about yourself...">{{ profile.bio }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn">💾 Save Profile</button>
+                </form>
+            </div>
+
+
+
+            <!-- Appearance Section -->
+            <div class="content-section" id="appearance-section">
+                <h2 class="section-title">
+                    <span>🎨</span>
+                    <span>Appearance Settings</span>
+                </h2>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Dark Mode</h3>
+                        <p>Switch between light and dark theme</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="darkModeToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Compact Mode</h3>
+                        <p>Reduce spacing for a denser layout</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="compactMode">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div class="content-section" id="notifications-section">
+                <h2 class="section-title">
+                    <span>🔔</span>
+                    <span>Notification Preferences</span>
+                </h2>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Email Notifications</h3>
+                        <p>Receive updates via email</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="emailNotifications" {% if user_settings.email_notifications %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>New Article Alerts</h3>
+                        <p>Get notified when new articles are published</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="articleAlerts" {% if user_settings.article_alerts %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Chat Responses</h3>
+                        <p>Notifications for AI responses</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chatNotifications" {% if user_settings.chat_notifications %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Recent Activity Section -->
+            <div class="content-section" id="recent-section">
+                <h2 class="section-title">
+                    <span>📬</span>
+                    <span>Recent Notifications</span>
+                </h2>
+
+                <div id="notificationsList">
+                    {% if notifications %}
+                        {% for notification in notifications %}
+                        <div class="notification-item">
+                            <div class="notification-header">
+                                <span class="notification-title">{{ notification.title }}</span>
+                                <span class="notification-time">{{ notification.time_ago }}</span>
+                            </div>
+                            <p class="notification-text">{{ notification.message }}</p>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <p>No notifications yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if notifications %}
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" onclick="clearNotifications()">
+                    Clear All Notifications
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Account Info Section -->
+            <div class="content-section" id="account-section">
+                <h2 class="section-title">
+                    <span>📊</span>
+                    <span>Account Information</span>
+                </h2>
+
+                <div class="stats-card">
+                    <div class="stat-label">Member Since</div>
+                    <div class="stat-value">{{ user.date_joined|date:"F d, Y" }}</div>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stat-label">Total Messages</div>
+                    <div class="stat-value">{{ profile.total_messages|default:"0" }}</div>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stat-label">Total Conversations</div>
+                    <div class="stat-value">{{ user_conversations|default:"0" }}</div>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stat-label">Articles Read</div>
+                    <div class="stat-value">{{ profile.articles_read.count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // CSRF Token Helper
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Tab Navigation - Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const menuItems = document.querySelectorAll('.menu-item');
+        const contentSections = document.querySelectorAll('.content-section');
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const section = this.getAttribute('data-section');
+                console.log('Switching to section:', section); // Debug log
+                
+                // Update active menu item
+                menuItems.forEach(mi => mi.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Show corresponding content
+                contentSections.forEach(cs => cs.classList.remove('active'));
+                const targetSection = document.getElementById(`${section}-section`);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                } else {
+                    console.error('Section not found:', `${section}-section`);
+                }
+            });
+        });
+    });
+
+    // Avatar Preview
+    document.addEventListener('DOMContentLoaded', function() {
+        const avatarInput = document.getElementById('avatarInput');
+        if (avatarInput) {
+            avatarInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const avatarPreview = document.getElementById('avatarPreview');
+                        const existingImg = document.getElementById('avatarImage');
+                        const initials = document.getElementById('avatarInitials');
+                        
+                        if (existingImg) {
+                            existingImg.src = e.target.result;
+                        } else {
+                            if (initials) initials.style.display = 'none';
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.id = 'avatarImage';
+                            avatarPreview.appendChild(img);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
+
+    // Remove Avatar Function
+    function removeAvatar() {
+        if (confirm('Are you sure you want to remove your profile picture?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = window.location.href;
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrftoken;
+            
+            const formTypeInput = document.createElement('input');
+            formTypeInput.type = 'hidden';
+            formTypeInput.name = 'form_type';
+            formTypeInput.value = 'remove_avatar';
+            
+            form.appendChild(csrfInput);
+            form.appendChild(formTypeInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    // Password visibility toggle
+    function togglePassword(inputId) {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+    }
+
+    // Update Setting API
+    async function updateSetting(type, value) {
+        try {
+            const response = await fetch('/api/settings/update/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ type, value })
+            });
+            return response.ok;
+        } catch (error) {
+            console.error('Error updating setting:', error);
+            return false;
+        }
+    }
+
+    // Dark Mode Toggle
+    document.addEventListener('DOMContentLoaded', function() {
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+        const savedTheme = localStorage.getItem('theme');
+        
+        if (savedTheme === 'dark') {
+            html.classList.add('dark-mode');
+            if (darkModeToggle) darkModeToggle.checked = true;
+        }
+        
+        if (darkModeToggle) {
+            darkModeToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    html.classList.add('dark-mode');
+                    localStorage.setItem('theme', 'dark');
+                    showNotification('Dark mode enabled', 'success');
+                } else {
+                    html.classList.remove('dark-mode');
+                    localStorage.setItem('theme', 'light');
+                    showNotification('Light mode enabled', 'success');
+                }
+            });
+        }
+
+        // Notification Toggles
+        const emailNotifications = document.getElementById('emailNotifications');
+        const articleAlerts = document.getElementById('articleAlerts');
+        const chatNotifications = document.getElementById('chatNotifications');
+
+        if (emailNotifications) {
+            emailNotifications.addEventListener('change', async function() {
+                const success = await updateSetting('email_notifications', this.checked);
+                if (success) showNotification(this.checked ? 'Email notifications enabled' : 'Email notifications disabled', 'success');
+            });
+        }
+        
+        if (articleAlerts) {
+            articleAlerts.addEventListener('change', async function() {
+                const success = await updateSetting('article_alerts', this.checked);
+                if (success) showNotification(this.checked ? 'Article alerts enabled' : 'Article alerts disabled', 'success');
+            });
+        }
+        
+        if (chatNotifications) {
+            chatNotifications.addEventListener('change', async function() {
+                const success = await updateSetting('chat_notifications', this.checked);
+                if (success) showNotification(this.checked ? 'Chat notifications enabled' : 'Chat notifications disabled', 'success');
+            });
+        }
+    });
+
+    // Clear Notifications
+    async function clearNotifications() {
+        try {
+            const response = await fetch('/api/notifications/clear/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                }
+            });
+            if (response.ok) {
+                const list = document.getElementById('notificationsList');
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>No notifications yet</p>
+                    </div>`;
+                showNotification('All notifications cleared', 'success');
+            }
+        } catch (error) {
+            console.error('Error clearing notifications:', error);
+            showNotification('Failed to clear notifications', 'error');
+        }
+    }
+
+    // Toast Notifications
+    function showNotification(message, type = 'info') {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        Object.assign(alert.style, {
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            padding: '12px 20px',
+            background: type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : 'var(--accent)',
+            color: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+            opacity: '0.95',
+            transition: 'opacity 0.3s ease',
+            zIndex: '10000',
+            fontWeight: '500'
+        });
+        document.body.appendChild(alert);
+        setTimeout(() => { 
+            alert.style.opacity = '0'; 
+            setTimeout(() => alert.remove(), 300); 
+        }, 3000);
+    }
+</script>
+{% endblock %}

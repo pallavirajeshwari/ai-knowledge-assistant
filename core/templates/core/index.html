@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #3c4672 0%, #1a202c 100%);
+        color: #e0e0e0;
+        line-height: 1.6;
+        overflow-x: hidden;
+    }
+
+    /* Navbar */
+    nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 5%;
+        background: rgba(26, 31, 54, 0.8);
+        backdrop-filter: blur(10px);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        border-bottom: 1px solid rgba(0, 217, 255, 0.1);
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+        background: linear-gradient(135deg, #5f8d95, #b288d7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #5f8d95, #b288d7);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 2rem;
+    }
+
+    .nav-links a {
+        color: #e0e0e0;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s;
+    }
+
+    .nav-links a:hover {
+        color: #5f8d95;
+    }
+
+    /* Hero Section */
+    .hero {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        background: linear-gradient(rgba(15, 26, 46, 0.7), rgba(15, 26, 46, 0.7)),
+        url("{% static 'images/ai.webp' %}") center/cover no-repeat;
+        overflow: hidden;
+        padding: 2rem;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        animation: fadeInUp 1.2s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .hero-title {
+        font-size: 4rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #5f8d95, #b288d7, #81c2cd);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        line-height: 1.1;
+    }
+
+    .hero-subtitle {
+        font-size: 1.5rem;
+        color: #b0b0b0;
+        margin-bottom: 2.5rem;
+    }
+
+    .cta-buttons {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 3rem;
+    }
+
+    .btn {
+        padding: 1rem 2.5rem;
+        border-radius: 0.75rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s;
+        border: none;
+        cursor: pointer;
+        display: inline-block;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #5f8d95, #b288d7);
+        color: white;
+        box-shadow: 0 10px 30px rgba(0, 217, 255, 0.3);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(0, 217, 255, 0.4);
+    }
+
+    .btn-secondary {
+        background: rgba(0, 217, 255, 0.1);
+        color: #5f8d95;
+        border: 2px solid#5f8d95;
+    }
+
+    .btn-secondary:hover {
+        background: #5f8d95;
+        color: #1a1f36;
+    }
+
+    /* Features Section */
+    .features {
+        padding: 6rem 5%;
+        background: rgba(26, 31, 54, 0.5);
+    }
+
+    .features h2 {
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 3rem;
+        background: linear-gradient(135deg, #5f8d95, #b288d7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .feature-card {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 2rem;
+        border-radius: 1rem;
+        border: 1px solid rgba(0, 217, 255, 0.2);
+        transition: all 0.3s;
+        text-align: center;
+    }
+
+    .feature-card:hover {
+        background: rgba(0, 217, 255, 0.1);
+        border-color: #5f8d95;
+        transform: translateY(-5px);
+    }
+
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .feature-card h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.75rem;
+        color: #5f8d95;
+    }
+
+    .feature-card p {
+        color: #b0b0b0;
+        line-height: 1.6;
+    }
+
+    /* CTA Section */
+    .cta-section {
+        padding: 4rem 5%;
+        background: linear-gradient(135deg, #5f8d95, #b288d7);
+        text-align: center;
+        color: white;
+    }
+
+    .cta-section h2 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .cta-section p {
+        font-size: 1.1rem;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 2rem;
+    }
+
+    /* Footer */
+    footer {
+        background: #0f1a2e;
+        padding: 2rem 5%;
+        text-align: center;
+        color: #666;
+        border-top: 1px solid rgba(0, 217, 255, 0.1);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+        }
+
+        .nav-links {
+            gap: 1rem;
+        }
+
+        .cta-buttons {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<nav>
+    <div class="logo">
+        <div class="logo-icon">🤖</div>
+        AI Assistant
+    </div>
+    <div class="nav-links">
+        <a href="{% url 'login' %}">Login</a>
+        <a href="{% url 'signup' %}">Sign Up</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-content">
+        <h1 class="hero-title">Your AI Knowledge Companion</h1>
+        <p class="hero-subtitle">Get intelligent answers, explore comprehensive knowledge, and enhance your learning
+            journey</p>
+        <div class="cta-buttons">
+            <a href="{% url 'signup' %}" class="btn btn-primary">Get Started Free</a>
+            <a href="#features" class="btn btn-secondary">Learn More</a>
+        </div>
+    </div>
+</section>
+
+<section class="features" id="features">
+    <h2>Powerful Features</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">💬</div>
+            <h3>Smart Chat</h3>
+            <p>Have intelligent conversations powered by your knowledge base. Get accurate, contextual answers
+                instantly.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📚</div>
+            <h3>Knowledge Base</h3>
+            <p>Browse and search through organized articles and resources. Stay informed and up-to-date.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">💾</div>
+            <h3>Conversation History</h3>
+            <p>Keep track of all your chats and revisit past discussions effortlessly.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <h3>Personalized Learning</h3>
+            <p>Track your progress and get recommendations tailored to your interests.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <h3>Advanced Search</h3>
+            <p>Quickly find exactly what you need across the entire knowledge base.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Analytics Dashboard</h3>
+            <p>Visualize your learning progress with insightful analytics.</p>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section">
+    <h2>Ready to Get Started?</h2>
+    <p>Join thousands of users already learning with AI Knowledge Assistant.</p>
+    <a href="{% url 'signup' %}" class="btn btn-primary">Create Your Account Now</a>
+</section>
+
+<footer>
+    <p>&copy; 2025 AI Knowledge Assistant Done By Pallavi </p>
+</footer>
+
+{% endblock %}
