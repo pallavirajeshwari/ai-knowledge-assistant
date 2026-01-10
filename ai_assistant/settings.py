@@ -2,12 +2,12 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(BASE_DIR / ".env")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+SECRET_KEY = os.environ.get("SECRET_KEY")
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
@@ -74,7 +74,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = []
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
@@ -111,7 +111,9 @@ SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', EMAIL_HOST_USER)
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
+    "https://ai-knowledge-assistant-1-niwl.onrender.com",
+    "http://localhost:8000",
 ]
+
 CSRF_COOKIE_SECURE = False
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
