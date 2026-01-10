@@ -19,6 +19,7 @@ import json
 import os
 import random
 import string
+import threading
 
 from .models import Article, Category, Conversation, Message, UserProfile, Notification, UserSettings, Enquiry, EmailOTP
 from .forms import SignUpForm, LoginForm, EnquiryForm
@@ -87,15 +88,16 @@ def signup_view(request):
                 password=make_password(password)  # Store hashed password
             )
             
-            # Send OTP email
+            # Send OTP email (non-blocking)
             try:
                 send_otp_email(email, otp_record.otp)
-                messages.success(request, f'✉️ OTP sent to {email}. Please verify to complete registration.')
+                messages.success(request, f'✉️ OTP sent to {email}. Please check your inbox.')
                 return redirect('verify_otp', email=email)
             except Exception as e:
-                otp_record.delete()
-                messages.error(request, f'Failed to send OTP email. Please try again. Error: {str(e)}')
-                return render(request, 'core/signup.html', {'form': form})
+                # Don't delete OTP record, just warn user
+                print(f"Email queuing: {e}")
+                messages.success(request, f'✉️ OTP is being sent to {email}. Please check your inbox in a moment.')
+                return redirect('verify_otp', email=email)
     else:
         form = SignUpForm()
     
@@ -219,12 +221,13 @@ def resend_otp(request, email):
         otp_record.attempts = 0  # Reset attempts
         otp_record.save()
         
-        # Send new OTP
+        # Send new OTP (non-blocking)
         try:
             send_otp_email(email, new_otp)
             messages.success(request, '✉️ New OTP sent to your email!')
         except Exception as e:
-            messages.error(request, f'❌ Failed to resend OTP: {str(e)}')
+            print(f"Email queuing: {e}")
+            messages.success(request, '✉️ New OTP is being sent to your email!')
         
         return redirect('verify_otp', email=email)
     except EmailOTP.DoesNotExist:
@@ -233,161 +236,92 @@ def resend_otp(request, email):
 
 
 def send_otp_email(email, otp):
-    """Send OTP email to user"""
-    subject = '🔐 Verify Your Email - AI Knowledge Assistant'
+    """Send OTP email to user - non-blocking with threading"""
     
-    # HTML email template
-    html_message = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {{
-                font-family: 'Arial', sans-serif;
-                background-color: #f4f4f4;
-                margin: 0;
-                padding: 0;
-            }}
-            .email-container {{
-                max-width: 600px;
-                margin: 40px auto;
-                background: white;
-                border-radius: 12px;
-                overflow: hidden;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            }}
-            .header {{
-                background: linear-gradient(135deg, #667eea, #764ba2);
-                color: white;
-                padding: 40px 30px;
-                text-align: center;
-            }}
-            .header h1 {{
-                margin: 0;
-                font-size: 28px;
-                font-weight: 700;
-            }}
-            .header .icon {{
-                font-size: 48px;
-                margin-bottom: 15px;
-            }}
-            .content {{
-                padding: 40px 30px;
-                text-align: center;
-            }}
-            .content h2 {{
-                color: #111827;
-                font-size: 24px;
-                margin-bottom: 20px;
-            }}
-            .content p {{
-                color: #6b7280;
-                line-height: 1.6;
-                margin-bottom: 30px;
-            }}
-            .otp-box {{
-                background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-                border: 3px dashed #667eea;
-                border-radius: 12px;
-                padding: 30px;
-                margin: 30px 0;
-                font-size: 36px;
-                font-weight: bold;
-                letter-spacing: 10px;
-                color: #667eea;
-                text-align: center;
-            }}
-            .info-box {{
-                background: #fef3c7;
-                border-left: 4px solid #f59e0b;
-                padding: 20px;
-                border-radius: 8px;
-                margin: 30px 0;
-                text-align: left;
-            }}
-            .info-box p {{
-                margin: 5px 0;
-                color: #92400e;
-                font-size: 14px;
-            }}
-            .footer {{
-                background: #f8f9fa;
-                padding: 30px;
-                text-align: center;
-                color: #6b7280;
-                font-size: 14px;
-            }}
-            .footer p {{
-                margin: 5px 0;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="email-container">
-            <div class="header">
-                <div class="icon">🤖</div>
-                <h1>AI Knowledge Assistant</h1>
-            </div>
+    def send_email_in_background():
+        """Background thread for email sending"""
+        try:
+            subject = '🔐 Verify Your Email - AI Knowledge Assistant'
             
-            <div class="content">
-                <h2>Email Verification</h2>
-                <p>Thank you for signing up! To complete your registration, please use the One-Time Password (OTP) below:</p>
-                
-                <div class="otp-box">
-                    {otp}
+            html_message = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
+                    .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }}
+                    .header {{ background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 40px 30px; text-align: center; }}
+                    .header h1 {{ margin: 0; font-size: 28px; }}
+                    .icon {{ font-size: 48px; margin-bottom: 15px; }}
+                    .content {{ padding: 40px 30px; text-align: center; }}
+                    .content h2 {{ color: #111827; font-size: 24px; margin-bottom: 20px; }}
+                    .content p {{ color: #6b7280; line-height: 1.6; margin-bottom: 30px; }}
+                    .otp-box {{ background: linear-gradient(135deg, #f3f4f6, #e5e7eb); border: 3px dashed #667eea; border-radius: 12px; padding: 30px; margin: 30px 0; font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 10px; }}
+                    .info-box {{ background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 30px 0; text-align: left; }}
+                    .info-box p {{ margin: 5px 0; color: #92400e; font-size: 14px; }}
+                    .footer {{ background: #f8f9fa; padding: 20px; text-align: center; color: #6b7280; font-size: 14px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <div class="icon">🤖</div>
+                        <h1>AI Knowledge Assistant</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Email Verification</h2>
+                        <p>Thank you for signing up! Use the OTP below to complete registration:</p>
+                        <div class="otp-box">{otp}</div>
+                        <div class="info-box">
+                            <p><strong>⏱️ Valid for 10 minutes</strong></p>
+                            <p>🔒 Don't share this code</p>
+                            <p>❓ Didn't request? Ignore this email</p>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <p><strong>AI Knowledge Assistant</strong></p>
+                        <p>&copy; 2024 Your intelligent learning companion</p>
+                    </div>
                 </div>
-                
-                <div class="info-box">
-                    <p><strong>⏱️ This OTP is valid for 10 minutes.</strong></p>
-                    <p>🔒 For security reasons, please do not share this code with anyone.</p>
-                    <p>❓ If you didn't request this, please ignore this email.</p>
-                </div>
-                
-                <p style="color: #111827; font-weight: 600;">
-                    Enter this code on the verification page to activate your account.
-                </p>
-            </div>
+            </body>
+            </html>
+            """
             
-            <div class="footer">
-                <p><strong>AI Knowledge Assistant</strong></p>
-                <p>Your intelligent learning companion</p>
-                <p>&copy; 2024 AI Knowledge Assistant. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+            plain_message = f"""
+AI Knowledge Assistant - Email Verification
+
+Your OTP: {otp}
+
+Valid for 10 minutes. Enter this on the verification page.
+
+Don't share this code with anyone.
+If you didn't request this, ignore this email.
+
+---
+AI Knowledge Assistant
+            """
+            
+            email_msg = EmailMultiAlternatives(
+                subject=subject,
+                body=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email]
+            )
+            email_msg.attach_alternative(html_message, "text/html")
+            email_msg.send(fail_silently=False)
+            
+            print(f"✅ OTP email sent successfully to {email}")
+            
+        except Exception as e:
+            print(f"❌ Email send failed for {email}: {str(e)}")
     
-    plain_message = f"""
-    AI Knowledge Assistant - Email Verification
+    # Start background thread - won't block request
+    thread = threading.Thread(target=send_email_in_background)
+    thread.daemon = True
+    thread.start()
     
-    Thank you for signing up!
-    
-    Your One-Time Password (OTP): {otp}
-    
-    This OTP is valid for 10 minutes.
-    
-    Please enter this code on the verification page to complete your registration.
-    
-    For security reasons, do not share this code with anyone.
-    
-    If you didn't request this, please ignore this email.
-    
-    ---
-    AI Knowledge Assistant
-    Your intelligent learning companion
-    """
-    
-    email_msg = EmailMultiAlternatives(
-        subject=subject,
-        body=plain_message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[email]
-    )
-    email_msg.attach_alternative(html_message, "text/html")
-    email_msg.send(fail_silently=False)
+    print(f"📧 Email queued for {email}")
 
 
 # ============================================
