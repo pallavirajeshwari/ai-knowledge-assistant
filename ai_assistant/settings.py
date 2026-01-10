@@ -161,28 +161,39 @@ REST_FRAMEWORK = {
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # ======================
-# EMAIL (GMAIL SMTP)
+# EMAIL (SENDGRID – PRODUCTION READY)
 # ======================
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # ✅ CORRECT
-EMAIL_HOST = 'smtp.sendgrid.net'
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_HOST = "smtp.sendgrid.net"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_TIMEOUT = 30
 
-EMAIL_HOST_USER = 'apikey'  # Literally the word "apikey"
-EMAIL_HOST_PASSWORD = os.getenv("SENDGRID_API_KEY", "")
+# IMPORTANT: Must be literally "apikey"
+EMAIL_HOST_USER = "apikey"
 
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", DEFAULT_FROM_EMAIL)
-SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", DEFAULT_FROM_EMAIL)
+# Comes from Render Environment Variables
+EMAIL_HOST_PASSWORD = os.environ.get("SENDGRID_API_KEY")
 
-SITE_URL = os.getenv("SITE_URL", "http://localhost:8000")
+# MUST be a verified SendGrid sender email
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    "pallavirajeshwari1404@gmail.com"
+)
 
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", DEFAULT_FROM_EMAIL)
+SUPPORT_EMAIL = os.environ.get("SUPPORT_EMAIL", DEFAULT_FROM_EMAIL)
 
+SITE_URL = os.environ.get(
+    "SITE_URL",
+    "https://ai-knowledge-assistant-1-niwl.onrender.com"
+)
 
-# Log email configuration status
+# Debug log (safe)
 if EMAIL_HOST_PASSWORD:
     print("✅ Email configured with SendGrid")
 else:
-    print("⚠️  SendGrid API key missing")
+    print("❌ SENDGRID_API_KEY missing")
