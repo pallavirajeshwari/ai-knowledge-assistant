@@ -3,6 +3,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env file only in local development
+# On Render, environment variables come from the dashboard
 load_dotenv(BASE_DIR / ".env")
 
 # ======================
@@ -105,7 +108,13 @@ USE_TZ = True
 # ======================
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Use simpler static files storage for Render
+# CompressedManifestStaticFilesStorage can cause 500 errors if manifest isn't perfect
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+
+# If you have a static folder for development files
+STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -127,6 +136,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = [
     "https://ai-knowledge-assistant-1-niwl.onrender.com",
     "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 CSRF_COOKIE_SECURE = not DEBUG
@@ -147,19 +157,26 @@ REST_FRAMEWORK = {
 # ======================
 # API KEYS
 # ======================
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # ======================
 # EMAIL (GMAIL SMTP)
 # ======================
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# Only use SMTP if credentials are provided
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 10
+else:
+    # Fallback to console backend for development
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'noreply@example.com'
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", EMAIL_HOST_USER)
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", EMAIL_HOST_USER)
 
