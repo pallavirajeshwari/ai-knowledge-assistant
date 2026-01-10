@@ -71,6 +71,15 @@
             color: var(--text-primary);
             font-size: 1.2rem;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
         }
 
         .nav-links {
@@ -136,6 +145,10 @@
     <!-- 🔹 Navbar (only show for authenticated users) -->
     {% if user.is_authenticated %}
     <nav class="navbar">
+        <div class="nav-title">
+            <img src="{% static 'images/ai.webp' %}" alt="AI Robot" class="nav-logo">
+            AI Knowledge Assistant
+        </div>
         <div class="nav-links">
         </div>
     </nav>
