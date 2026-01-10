@@ -164,23 +164,25 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # EMAIL (GMAIL SMTP)
 # ======================
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = 'smtp.sendgrid.net'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_TIMEOUT = 30
 
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_USER = 'apikey'  # Literally the word "apikey"
+EMAIL_HOST_PASSWORD = os.getenv("SENDGRID_API_KEY", "")
 
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'noreply@example.com'
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", EMAIL_HOST_USER)
-SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", DEFAULT_FROM_EMAIL)
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", DEFAULT_FROM_EMAIL)
 
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8000")
 
+
+
 # Log email configuration status
-if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
-    print("✅ Email configured with SMTP")
+if EMAIL_HOST_PASSWORD:
+    print("✅ Email configured with SendGrid")
 else:
-    print("⚠️  Email credentials missing - emails will fail")
+    print("⚠️  SendGrid API key missing")
