@@ -1,3 +1,4 @@
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -162,22 +163,24 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # ======================
 # EMAIL (GMAIL SMTP)
 # ======================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_TIMEOUT = 30
+
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-
-# Only use SMTP if credentials are provided
-if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.gmail.com'
-    EMAIL_PORT = 587
-    EMAIL_USE_TLS = True
-    EMAIL_TIMEOUT = 10
-else:
-    # Fallback to console backend for development
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'noreply@example.com'
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", EMAIL_HOST_USER)
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", EMAIL_HOST_USER)
 
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8000")
+
+# Log email configuration status
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    print("✅ Email configured with SMTP")
+else:
+    print("⚠️  Email credentials missing - emails will fail")
