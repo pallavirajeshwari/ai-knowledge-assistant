@@ -33,12 +33,22 @@ def send_email_with_sendgrid(to_email, subject, html_content, plain_content):
     try:
         # Try SendGrid first if API key is available
         sendgrid_key = os.getenv('SENDGRID_API_KEY')
+        
         if sendgrid_key:
             from sendgrid import SendGridAPIClient
             from sendgrid.helpers.mail import Mail
             
+            # Use the verified sender email
+            from_email = 'pallavirajeshwari1404@gmail.com'
+            
+            print(f"📧 Attempting to send email via SendGrid...")
+            print(f"   From: {from_email}")
+            print(f"   To: {to_email}")
+            print(f"   API Key exists: {bool(sendgrid_key)}")
+            print(f"   API Key starts with 'SG.': {sendgrid_key.startswith('SG.') if sendgrid_key else False}")
+            
             message = Mail(
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=from_email,
                 to_emails=to_email,
                 subject=subject,
                 plain_text_content=plain_content,
@@ -47,9 +57,12 @@ def send_email_with_sendgrid(to_email, subject, html_content, plain_content):
             
             sg = SendGridAPIClient(sendgrid_key)
             response = sg.send(message)
-            print(f"✅ SendGrid email sent to {to_email} (Status: {response.status_code})")
+            
+            print(f"✅ SendGrid Response Status: {response.status_code}")
+            print(f"✅ SendGrid email sent to {to_email}")
             return True
         else:
+            print("⚠️ No SendGrid API key found, falling back to SMTP")
             # Fallback to SMTP if SendGrid not configured
             email_msg = EmailMultiAlternatives(
                 subject=subject,
@@ -64,6 +77,9 @@ def send_email_with_sendgrid(to_email, subject, html_content, plain_content):
             
     except Exception as e:
         print(f"❌ Email send failed for {to_email}: {str(e)}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        print(f"❌ Full traceback: {traceback.format_exc()}")
         raise e
 
 
