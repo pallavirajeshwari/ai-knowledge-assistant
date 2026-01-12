@@ -19,11 +19,53 @@ import json
 import os
 import random
 import string
-import threading
 
 from .models import Article, Category, Conversation, Message, UserProfile, Notification, UserSettings, Enquiry, EmailOTP
 from .forms import SignUpForm, LoginForm, EnquiryForm
 from .utils import get_ai_response, search_knowledge_base, generate_conversation_title
+
+# ============================================
+# SENDGRID EMAIL HELPER
+# ============================================
+
+def send_email_with_sendgrid(to_email, subject, html_content, plain_content):
+    """Send email using SendGrid API - more reliable than SMTP on Render"""
+    try:
+        # Try SendGrid first if API key is available
+        sendgrid_key = os.getenv('SENDGRID_API_KEY')
+        if sendgrid_key:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail
+            
+            message = Mail(
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to_emails=to_email,
+                subject=subject,
+                plain_text_content=plain_content,
+                html_content=html_content
+            )
+            
+            sg = SendGridAPIClient(sendgrid_key)
+            response = sg.send(message)
+            print(f"✅ SendGrid email sent to {to_email} (Status: {response.status_code})")
+            return True
+        else:
+            # Fallback to SMTP if SendGrid not configured
+            email_msg = EmailMultiAlternatives(
+                subject=subject,
+                body=plain_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[to_email]
+            )
+            email_msg.attach_alternative(html_content, "text/html")
+            email_msg.send(fail_silently=False)
+            print(f"✅ SMTP email sent to {to_email}")
+            return True
+            
+    except Exception as e:
+        print(f"❌ Email send failed for {to_email}: {str(e)}")
+        raise e
+
 
 def index(request):
     if request.user.is_authenticated:
@@ -49,11 +91,11 @@ def login_view(request):
 
 
 # ============================================
-# UPDATED SIGNUP WITH OTP VERIFICATION
+# SIGNUP WITH OTP VERIFICATION
 # ============================================
 
 def signup_view(request):
-    """Step 1: Collect user details and create account (skip OTP in production)"""
+    """Step 1: Collect user details and send OTP"""
     if request.user.is_authenticated:
         return redirect('dashboard')
     
@@ -76,70 +118,27 @@ def signup_view(request):
                 messages.error(request, 'Email already registered!')
                 return render(request, 'core/signup.html', {'form': form})
             
-            # PRODUCTION MODE: Skip email verification
-            if not settings.DEBUG:
-                try:
-                    with transaction.atomic():
-                        # Create user directly
-                        user = User.objects.create_user(
-                            username=username,
-                            email=email,
-                            password=password,
-                            first_name=first_name,
-                            last_name=last_name
-                        )
-                        
-                        # Create user profile
-                        profile, created = UserProfile.objects.get_or_create(user=user)
-                        
-                        # Create user settings
-                        settings_obj, created = UserSettings.objects.get_or_create(user=user)
-                        
-                        # Create welcome notification
-                        Notification.objects.create(
-                            user=user,
-                            title="Welcome to AI Assistant! 🎉",
-                            message="Get started by exploring our knowledge base or starting a new conversation.",
-                            notification_type='welcome'
-                        )
-                        
-                        # Log the user in automatically
-                        login(request, user)
-                        
-                        messages.success(request, f'🎉 Account created successfully! Welcome aboard, {first_name or username}!')
-                        return redirect('dashboard')
-                        
-                except IntegrityError:
-                    messages.error(request, '❌ Account creation failed. Username or email may already exist.')
-                    return render(request, 'core/signup.html', {'form': form})
-                except Exception as e:
-                    messages.error(request, f'❌ Error creating account: {str(e)}')
-                    return render(request, 'core/signup.html', {'form': form})
+            # Delete any existing OTP for this email
+            EmailOTP.objects.filter(email=email).delete()
             
-            # DEVELOPMENT MODE: Use OTP verification
-            else:
-                # Delete any existing OTP for this email
-                EmailOTP.objects.filter(email=email).delete()
-                
-                # Create new OTP record
-                otp_record = EmailOTP.objects.create(
-                    email=email,
-                    username=username,
-                    first_name=first_name,
-                    last_name=last_name,
-                    password=make_password(password)  # Store hashed password
-                )
-                
-                # Send OTP email (non-blocking)
-                try:
-                    send_otp_email(email, otp_record.otp)
-                    messages.success(request, f'✉️ OTP sent to {email}. Please check your inbox.')
-                    return redirect('verify_otp', email=email)
-                except Exception as e:
-                    # Don't delete OTP record, just warn user
-                    print(f"Email queuing: {e}")
-                    messages.success(request, f'✉️ OTP is being sent to {email}. Please check your inbox in a moment.')
-                    return redirect('verify_otp', email=email)
+            # Create new OTP record
+            otp_record = EmailOTP.objects.create(
+                email=email,
+                username=username,
+                first_name=first_name,
+                last_name=last_name,
+                password=make_password(password)  # Store hashed password
+            )
+            
+            # Send OTP email
+            try:
+                send_otp_email(email, otp_record.otp)
+                messages.success(request, f'✉️ OTP sent to {email}. Please check your inbox.')
+                return redirect('verify_otp', email=email)
+            except Exception as e:
+                messages.error(request, f'Failed to send OTP email. Please try again. Error: {str(e)}')
+                otp_record.delete()
+                return render(request, 'core/signup.html', {'form': form})
     else:
         form = SignUpForm()
     
@@ -170,10 +169,10 @@ def verify_otp(request, email):
         entered_otp = request.POST.get('otp', '').strip()
         
         if entered_otp == otp_record.otp:
-            # OTP is correct - create user account with transaction
+            # OTP is correct - create user account
             try:
                 with transaction.atomic():
-                    # Check if user already exists (double-check)
+                    # Check if user already exists
                     if User.objects.filter(username=otp_record.username).exists():
                         messages.error(request, '❌ Username already exists. Please signup with a different username.')
                         otp_record.delete()
@@ -193,14 +192,14 @@ def verify_otp(request, email):
                         password=otp_record.password  # Already hashed
                     )
                     
-                    # Mark OTP as verified BEFORE creating profile
+                    # Mark OTP as verified
                     otp_record.is_verified = True
                     otp_record.save()
                     
-                    # Create user profile (with get_or_create to prevent duplicates)
+                    # Create user profile
                     profile, created = UserProfile.objects.get_or_create(user=user)
                     
-                    # Create user settings (with get_or_create to prevent duplicates)
+                    # Create user settings
                     settings_obj, created = UserSettings.objects.get_or_create(user=user)
                     
                     # Create welcome notification
@@ -216,15 +215,13 @@ def verify_otp(request, email):
                     
                     messages.success(request, f'🎉 Account created successfully! Welcome aboard, {user.first_name or user.username}!')
                     
-                    # Delete OTP record after successful registration
+                    # Delete OTP record
                     otp_record.delete()
                     
                     return redirect('dashboard')
                     
-            except IntegrityError as e:
-                # Handle any database integrity errors
-                messages.error(request, f'❌ Account creation failed. This username or email may already exist. Please try again.')
-                # Delete the OTP record so user can restart
+            except IntegrityError:
+                messages.error(request, '❌ Account creation failed. Username or email may already exist.')
                 otp_record.delete()
                 return redirect('signup')
             except Exception as e:
@@ -263,13 +260,12 @@ def resend_otp(request, email):
         otp_record.attempts = 0  # Reset attempts
         otp_record.save()
         
-        # Send new OTP (non-blocking)
+        # Send new OTP
         try:
             send_otp_email(email, new_otp)
             messages.success(request, '✉️ New OTP sent to your email!')
         except Exception as e:
-            print(f"Email queuing: {e}")
-            messages.success(request, '✉️ New OTP is being sent to your email!')
+            messages.error(request, f'Failed to send OTP. Error: {str(e)}')
         
         return redirect('verify_otp', email=email)
     except EmailOTP.DoesNotExist:
@@ -278,92 +274,70 @@ def resend_otp(request, email):
 
 
 def send_otp_email(email, otp):
-    """Send OTP email to user - non-blocking with threading"""
+    """Send OTP email using SendGrid or SMTP"""
+    subject = '🔐 Verify Your Email - AI Knowledge Assistant'
     
-    def send_email_in_background():
-        """Background thread for email sending"""
-        try:
-            subject = '🔐 Verify Your Email - AI Knowledge Assistant'
-            
-            html_message = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
-                    .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }}
-                    .header {{ background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 40px 30px; text-align: center; }}
-                    .header h1 {{ margin: 0; font-size: 28px; }}
-                    .icon {{ font-size: 48px; margin-bottom: 15px; }}
-                    .content {{ padding: 40px 30px; text-align: center; }}
-                    .content h2 {{ color: #111827; font-size: 24px; margin-bottom: 20px; }}
-                    .content p {{ color: #6b7280; line-height: 1.6; margin-bottom: 30px; }}
-                    .otp-box {{ background: linear-gradient(135deg, #f3f4f6, #e5e7eb); border: 3px dashed #667eea; border-radius: 12px; padding: 30px; margin: 30px 0; font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 10px; }}
-                    .info-box {{ background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 30px 0; text-align: left; }}
-                    .info-box p {{ margin: 5px 0; color: #92400e; font-size: 14px; }}
-                    .footer {{ background: #f8f9fa; padding: 20px; text-align: center; color: #6b7280; font-size: 14px; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <div class="icon">🤖</div>
-                        <h1>AI Knowledge Assistant</h1>
-                    </div>
-                    <div class="content">
-                        <h2>Email Verification</h2>
-                        <p>Thank you for signing up! Use the OTP below to complete registration:</p>
-                        <div class="otp-box">{otp}</div>
-                        <div class="info-box">
-                            <p><strong>⏱️ Valid for 10 minutes</strong></p>
-                            <p>🔒 Don't share this code</p>
-                            <p>❓ Didn't request? Ignore this email</p>
-                        </div>
-                    </div>
-                    <div class="footer">
-                        <p><strong>AI Knowledge Assistant</strong></p>
-                        <p>&copy; 2024 Your intelligent learning companion</p>
-                    </div>
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }}
+            .header {{ background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0; }}
+            .header h1 {{ margin: 0; font-size: 28px; }}
+            .icon {{ font-size: 48px; margin-bottom: 15px; }}
+            .content {{ padding: 40px 30px; text-align: center; }}
+            .content h2 {{ color: #111827; font-size: 24px; margin-bottom: 20px; }}
+            .content p {{ color: #6b7280; line-height: 1.6; margin-bottom: 30px; }}
+            .otp-box {{ background: linear-gradient(135deg, #f3f4f6, #e5e7eb); border: 3px dashed #667eea; border-radius: 12px; padding: 30px; margin: 30px 0; font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 10px; }}
+            .info-box {{ background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 30px 0; text-align: left; }}
+            .info-box p {{ margin: 5px 0; color: #92400e; font-size: 14px; }}
+            .footer {{ background: #f8f9fa; padding: 20px; text-align: center; color: #6b7280; font-size: 14px; border-radius: 0 0 12px 12px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="icon">🤖</div>
+                <h1>AI Knowledge Assistant</h1>
+            </div>
+            <div class="content">
+                <h2>Email Verification</h2>
+                <p>Thank you for signing up! Use the OTP below to complete your registration:</p>
+                <div class="otp-box">{otp}</div>
+                <div class="info-box">
+                    <p><strong>⏱️ Valid for 10 minutes</strong></p>
+                    <p>🔒 Don't share this code with anyone</p>
+                    <p>❓ Didn't request this? Ignore this email</p>
                 </div>
-            </body>
-            </html>
-            """
-            
-            plain_message = f"""
+            </div>
+            <div class="footer">
+                <p><strong>AI Knowledge Assistant</strong></p>
+                <p>&copy; 2026 Your intelligent learning companion</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    plain_message = f"""
 AI Knowledge Assistant - Email Verification
 
 Your OTP: {otp}
 
-Valid for 10 minutes. Enter this on the verification page.
+Valid for 10 minutes. Enter this code on the verification page.
 
 Don't share this code with anyone.
-If you didn't request this, ignore this email.
+If you didn't request this, please ignore this email.
 
 ---
 AI Knowledge Assistant
-            """
-            
-            email_msg = EmailMultiAlternatives(
-                subject=subject,
-                body=plain_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email]
-            )
-            email_msg.attach_alternative(html_message, "text/html")
-            email_msg.send(fail_silently=False)
-            
-            print(f"✅ OTP email sent successfully to {email}")
-            
-        except Exception as e:
-            print(f"❌ Email send failed for {email}: {str(e)}")
+    """
     
-    # Start background thread - won't block request
-    thread = threading.Thread(target=send_email_in_background)
-    thread.daemon = True
-    thread.start()
-    
-    print(f"📧 Email queued for {email}")
+    # Send using helper function
+    send_email_with_sendgrid(email, subject, html_message, plain_message)
 
 
 # ============================================
@@ -578,14 +552,7 @@ def send_enquiry_emails(enquiry):
     admin_html_message = render_to_string('core/emails/enquiry_admin.html', admin_context)
     admin_plain_message = strip_tags(admin_html_message)
     
-    admin_email = EmailMultiAlternatives(
-        subject=admin_subject,
-        body=admin_plain_message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[settings.ADMIN_EMAIL],
-    )
-    admin_email.attach_alternative(admin_html_message, "text/html")
-    admin_email.send(fail_silently=False)
+    send_email_with_sendgrid(settings.ADMIN_EMAIL, admin_subject, admin_html_message, admin_plain_message)
     
     user_subject = f'We received your enquiry: {enquiry.subject}'
     user_context = {
@@ -595,14 +562,7 @@ def send_enquiry_emails(enquiry):
     user_html_message = render_to_string('core/emails/enquiry_confirmation.html', user_context)
     user_plain_message = strip_tags(user_html_message)
     
-    user_email = EmailMultiAlternatives(
-        subject=user_subject,
-        body=user_plain_message,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[enquiry.email],
-    )
-    user_email.attach_alternative(user_html_message, "text/html")
-    user_email.send(fail_silently=False)
+    send_email_with_sendgrid(enquiry.email, user_subject, user_html_message, user_plain_message)
 
 @login_required
 @require_http_methods(["POST"])
