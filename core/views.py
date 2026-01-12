@@ -53,7 +53,7 @@ def login_view(request):
 # ============================================
 
 def signup_view(request):
-    """Step 1: Collect user details and send OTP to email"""
+    """Step 1: Collect user details and create account (skip OTP in production)"""
     if request.user.is_authenticated:
         return redirect('dashboard')
     
@@ -76,28 +76,70 @@ def signup_view(request):
                 messages.error(request, 'Email already registered!')
                 return render(request, 'core/signup.html', {'form': form})
             
-            # Delete any existing OTP for this email
-            EmailOTP.objects.filter(email=email).delete()
+            # PRODUCTION MODE: Skip email verification
+            if not settings.DEBUG:
+                try:
+                    with transaction.atomic():
+                        # Create user directly
+                        user = User.objects.create_user(
+                            username=username,
+                            email=email,
+                            password=password,
+                            first_name=first_name,
+                            last_name=last_name
+                        )
+                        
+                        # Create user profile
+                        profile, created = UserProfile.objects.get_or_create(user=user)
+                        
+                        # Create user settings
+                        settings_obj, created = UserSettings.objects.get_or_create(user=user)
+                        
+                        # Create welcome notification
+                        Notification.objects.create(
+                            user=user,
+                            title="Welcome to AI Assistant! 🎉",
+                            message="Get started by exploring our knowledge base or starting a new conversation.",
+                            notification_type='welcome'
+                        )
+                        
+                        # Log the user in automatically
+                        login(request, user)
+                        
+                        messages.success(request, f'🎉 Account created successfully! Welcome aboard, {first_name or username}!')
+                        return redirect('dashboard')
+                        
+                except IntegrityError:
+                    messages.error(request, '❌ Account creation failed. Username or email may already exist.')
+                    return render(request, 'core/signup.html', {'form': form})
+                except Exception as e:
+                    messages.error(request, f'❌ Error creating account: {str(e)}')
+                    return render(request, 'core/signup.html', {'form': form})
             
-            # Create new OTP record
-            otp_record = EmailOTP.objects.create(
-                email=email,
-                username=username,
-                first_name=first_name,
-                last_name=last_name,
-                password=make_password(password)  # Store hashed password
-            )
-            
-            # Send OTP email (non-blocking)
-            try:
-                send_otp_email(email, otp_record.otp)
-                messages.success(request, f'✉️ OTP sent to {email}. Please check your inbox.')
-                return redirect('verify_otp', email=email)
-            except Exception as e:
-                # Don't delete OTP record, just warn user
-                print(f"Email queuing: {e}")
-                messages.success(request, f'✉️ OTP is being sent to {email}. Please check your inbox in a moment.')
-                return redirect('verify_otp', email=email)
+            # DEVELOPMENT MODE: Use OTP verification
+            else:
+                # Delete any existing OTP for this email
+                EmailOTP.objects.filter(email=email).delete()
+                
+                # Create new OTP record
+                otp_record = EmailOTP.objects.create(
+                    email=email,
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password=make_password(password)  # Store hashed password
+                )
+                
+                # Send OTP email (non-blocking)
+                try:
+                    send_otp_email(email, otp_record.otp)
+                    messages.success(request, f'✉️ OTP sent to {email}. Please check your inbox.')
+                    return redirect('verify_otp', email=email)
+                except Exception as e:
+                    # Don't delete OTP record, just warn user
+                    print(f"Email queuing: {e}")
+                    messages.success(request, f'✉️ OTP is being sent to {email}. Please check your inbox in a moment.')
+                    return redirect('verify_otp', email=email)
     else:
         form = SignUpForm()
     
