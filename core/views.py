@@ -370,7 +370,15 @@ def logout_view(request):
 def dashboard(request):
     profile = request.user.profile
     recent_conversations = Conversation.objects.filter(user=request.user)[:5]
+    
+    # DEBUG: Print all articles
+    all_articles = Article.objects.all()
+    print(f"Total articles in DB: {all_articles.count()}")
+    for article in all_articles:
+        print(f"Article: {article.title}, Published: {article.is_published}")
+    
     recent_articles = Article.objects.filter(is_published=True)[:6]
+    print(f"Published articles: {recent_articles.count()}")
     
     context = {
         'profile': profile,
@@ -760,4 +768,4 @@ def mark_notification_read(request, notification_id):
         notification.save()
         return JsonResponse({'success': True})
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'error': str(e)}, status=400) 

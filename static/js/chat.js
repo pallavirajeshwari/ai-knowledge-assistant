@@ -118,10 +118,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const userInitials = document.querySelector('.user-avatar')?.textContent || 'U';
         const aiAvatarImg = document.querySelector('.logo-icon img')?.src || '/static/images/ai.webp';
 
+        // Parse markdown for AI messages, escape HTML for user messages
+        const processedContent = role === 'assistant' ? marked.parse(content) : escapeHtml(content);
+
         if (role === 'user') {
             messageDiv.innerHTML = `
                 <div class="message-content">
-                    <div class="message-bubble">${escapeHtml(content)}</div>
+                    <div class="message-bubble">${processedContent}</div>
                 </div>
                 <div class="message-avatar user-avatar-msg">${userInitials}</div>
             `;
@@ -131,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <img src="${aiAvatarImg}" alt="AI Avatar">
                 </div>
                 <div class="message-content">
-                    <div class="message-bubble">${escapeHtml(content)}</div>
+                    <div class="message-bubble markdown-content">${processedContent}</div>
                 </div>
             `;
         }
@@ -243,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <img src="${aiAvatarImg}" alt="AI Avatar">
                     </div>
                     <div class="message-content">
-                        <div class="message-bubble">
+                        <div class="message-bubble markdown-content">
                             Hello! I'm your AI Knowledge Assistant 🤖. I can help you explore topics, answer questions, and provide insights. What would you like to know?
                         </div>
                     </div>
