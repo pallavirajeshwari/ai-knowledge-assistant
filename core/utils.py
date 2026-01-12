@@ -38,8 +38,8 @@ def get_ai_response(user_message, context="", conversation_history=None):
         if not settings.GEMINI_API_KEY:
             return f"Demo mode: Received '{user_message}'. Add Gemini API key for full functionality."
         
-        # Initialize Gemini model with correct model name (including models/ prefix)
-        model = genai.GenerativeModel('models/gemini-2.5-flash')
+        # FIXED: Use correct model name without 'models/' prefix
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Generate response with safety settings
         generation_config = {

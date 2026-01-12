@@ -12,7 +12,26 @@ class ArticleAdmin(admin.ModelAdmin):
     list_filter = ['category', 'is_published', 'created_at']
     search_fields = ['title', 'content']
     prepopulated_fields = {'slug': ('title',)}
-
+    
+    # Set default value for is_published when creating new articles
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if obj is None:  # Only for new articles (not editing existing ones)
+            form.base_fields['is_published'].initial = True
+        return form
+    
+    # Add bulk actions to publish/unpublish articles
+    def publish_articles(self, request, queryset):
+        queryset.update(is_published=True)
+        self.message_user(request, f'{queryset.count()} article(s) published.')
+    publish_articles.short_description = "Publish selected articles"
+    
+    def unpublish_articles(self, request, queryset):
+        queryset.update(is_published=False)
+        self.message_user(request, f'{queryset.count()} article(s) unpublished.')
+    unpublish_articles.short_description = "Unpublish selected articles"
+    
+    actions = ['publish_articles', 'unpublish_articles']
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
     list_display = ['user', 'title', 'created_at']

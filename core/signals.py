@@ -7,12 +7,15 @@ from .models import UserProfile, UserSettings
 def create_user_profile(sender, instance, created, **kwargs):
     """Automatically create UserProfile and UserSettings when a new User is created"""
     if created:
-        # Use get_or_create to prevent duplicates
+        # Use get_or_create to prevent duplicates in case of race conditions
         UserProfile.objects.get_or_create(user=instance)
         UserSettings.objects.get_or_create(user=instance)
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
-    """Save the profile whenever the user is saved"""
-    if hasattr(instance, 'profile'):
-        instance.profile.save()
+    """Ensure profile and settings exist whenever user is saved"""
+    # Don't try to save during user creation (handled above)
+    if not kwargs.get('created', False):
+        # Ensure profile and settings exist
+        UserProfile.objects.get_or_create(user=instance)
+        UserSettings.objects.get_or_create(user=instance)

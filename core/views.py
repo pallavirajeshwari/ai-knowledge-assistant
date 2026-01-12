@@ -28,8 +28,9 @@ from .utils import get_ai_response, search_knowledge_base, generate_conversation
 # SENDGRID EMAIL HELPER
 # ============================================
 
+
 def send_email_with_sendgrid(to_email, subject, html_content, plain_content):
-    """Send email using SendGrid API - more reliable than SMTP on Render"""
+    """Send email using SendGrid API - FIXED with better error handling"""
     try:
         # Try SendGrid first if API key is available
         sendgrid_key = os.getenv('SENDGRID_API_KEY')
@@ -80,8 +81,8 @@ def send_email_with_sendgrid(to_email, subject, html_content, plain_content):
         print(f"❌ Error type: {type(e).__name__}")
         import traceback
         print(f"❌ Full traceback: {traceback.format_exc()}")
-        raise e
-
+        # FIXED: Return False instead of raising to allow graceful degradation
+        return False
 
 def index(request):
     if request.user.is_authenticated:
@@ -161,8 +162,9 @@ def signup_view(request):
     return render(request, 'core/signup.html', {'form': form})
 
 
+
 def verify_otp(request, email):
-    """Step 2: Verify OTP and create user account"""
+    """Step 2: Verify OTP and create user account - FIXED VERSION"""
     try:
         otp_record = EmailOTP.objects.get(email=email, is_verified=False)
     except EmailOTP.DoesNotExist:
@@ -188,14 +190,13 @@ def verify_otp(request, email):
             # OTP is correct - create user account
             try:
                 with transaction.atomic():
-                    # Check if user already exists
-                    if User.objects.filter(username=otp_record.username).exists():
-                        messages.error(request, '❌ Username already exists. Please signup with a different username.')
-                        otp_record.delete()
-                        return redirect('signup')
-                    
-                    if User.objects.filter(email=otp_record.email).exists():
-                        messages.error(request, '❌ Email already registered. Please login or use a different email.')
+                    # FIXED: Check both username and email in one query
+                    if User.objects.filter(Q(username=otp_record.username) | Q(email=otp_record.email)).exists():
+                        existing_user = User.objects.filter(Q(username=otp_record.username) | Q(email=otp_record.email)).first()
+                        if existing_user.username == otp_record.username:
+                            messages.error(request, '❌ Username already exists. Please signup with a different username.')
+                        else:
+                            messages.error(request, '❌ Email already registered. Please login or use a different email.')
                         otp_record.delete()
                         return redirect('signup')
                     
@@ -212,10 +213,8 @@ def verify_otp(request, email):
                     otp_record.is_verified = True
                     otp_record.save()
                     
-                    # Create user profile
+                    # FIXED: Ensure profile and settings are created
                     profile, created = UserProfile.objects.get_or_create(user=user)
-                    
-                    # Create user settings
                     settings_obj, created = UserSettings.objects.get_or_create(user=user)
                     
                     # Create welcome notification
@@ -236,8 +235,8 @@ def verify_otp(request, email):
                     
                     return redirect('dashboard')
                     
-            except IntegrityError:
-                messages.error(request, '❌ Account creation failed. Username or email may already exist.')
+            except IntegrityError as ie:
+                messages.error(request, f'❌ Account creation failed: {str(ie)}')
                 otp_record.delete()
                 return redirect('signup')
             except Exception as e:
@@ -257,7 +256,6 @@ def verify_otp(request, email):
                 return redirect('signup')
     
     return render(request, 'core/verify_otp.html', {'email': email})
-
 
 def resend_otp(request, email):
     """Resend OTP to email"""
@@ -400,10 +398,13 @@ def chat_view(request):
         'active_conversation': active_conversation,
     })
 
+
 @login_required
 def settings_view(request):
-    profile = request.user.profile
-    user_settings = profile
+    """Settings view - FIXED VERSION"""
+    # FIXED: Ensure profile and settings exist
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+    user_settings, created = UserSettings.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
@@ -503,24 +504,26 @@ def knowledge_base(request):
     })
 
 @login_required
+
+@login_required
 def article_detail(request, slug):
+    """Article detail view - FIXED VERSION"""
     article = get_object_or_404(Article, slug=slug, is_published=True)
     article.views += 1
     article.save()
     
+    # Add to user's read articles
     request.user.profile.articles_read.add(article)
     
-    try:
-        user_settings = request.user.settings
-        if user_settings.article_alerts:
-            Notification.objects.create(
-                user=request.user,
-                title=f"You read: {article.title}",
-                message=f"You've completed reading this article. Check out related articles in {article.category.name}.",
-                notification_type='article'
-            )
-    except UserSettings.DoesNotExist:
-        pass
+    # FIXED: Use get_or_create instead of try/except
+    user_settings, created = UserSettings.objects.get_or_create(user=request.user)
+    if user_settings.article_alerts:
+        Notification.objects.create(
+            user=request.user,
+            title=f"You read: {article.title}",
+            message=f"You've completed reading this article. Check out related articles in {article.category.name}.",
+            notification_type='article'
+        )
     
     related_articles = Article.objects.filter(
         category=article.category,
@@ -608,9 +611,11 @@ def create_conversation(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
+
 @login_required
 @require_http_methods(["POST"])
 def send_message(request):
+    """Send message in conversation - FIXED VERSION"""
     try:
         data = json.loads(request.body)
         conversation_id = data.get('conversation_id')
@@ -621,41 +626,45 @@ def send_message(request):
         
         conversation = get_object_or_404(Conversation, id=conversation_id, user=request.user)
         
+        # Create user message
         user_msg = Message.objects.create(
             conversation=conversation,
             role='user',
             content=user_message
         )
         
+        # Get AI response
         history = Message.objects.filter(conversation=conversation).order_by('-timestamp')[:10]
         context = search_knowledge_base(user_message)
         ai_response = get_ai_response(user_message, context, history)
         
+        # Create AI message
         ai_msg = Message.objects.create(
             conversation=conversation,
             role='assistant',
             content=ai_response
         )
         
+        # Update conversation title if first exchange
         if conversation.message_count() == 2:
             conversation.title = generate_conversation_title(user_message)
         conversation.preview = user_message[:100]
         conversation.save()
         
-        request.user.profile.total_messages += 2
-        request.user.profile.save()
+        # Update user profile stats
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        profile.total_messages += 2
+        profile.save()
         
-        try:
-            user_settings = request.user.settings
-            if user_settings.chat_notifications:
-                Notification.objects.create(
-                    user=request.user,
-                    title="AI Response Received",
-                    message=f"Your question about '{user_message[:50]}...' has been answered.",
-                    notification_type='chat'
-                )
-        except UserSettings.DoesNotExist:
-            pass
+        # FIXED: Use get_or_create for settings
+        user_settings, created = UserSettings.objects.get_or_create(user=request.user)
+        if user_settings.chat_notifications:
+            Notification.objects.create(
+                user=request.user,
+                title="AI Response Received",
+                message=f"Your question about '{user_message[:50]}...' has been answered.",
+                notification_type='chat'
+            )
         
         return JsonResponse({
             'user_message': {
@@ -769,3 +778,4 @@ def mark_notification_read(request, notification_id):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400) 
+
